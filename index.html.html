@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventory Gudang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.12.3/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#F5F6F7;
+    --surface:#FFFFFF;
+    --border:#DDE1E6;
+    --navy:#14213D;
+    --navy-2:#1D2E52;
+    --orange:#FB8B24;
+    --orange-dark:#D9740A;
+    --green:#2E7D32;
+    --green-bg:#E8F5E9;
+    --red:#C62828;
+    --red-bg:#FDECEA;
+    --text:#1A1D23;
+    --text-2:#5B6472;
+    --text-3:#8A93A2;
+    --radius:4px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;}
+  h1,h2,h3,.brand-font{font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  a{color:inherit;}
+
+  .app{display:flex;min-height:100vh;}
+
+  /* Sidebar */
+  .sidebar{
+    width:220px;flex-shrink:0;background:var(--navy);color:#fff;
+    display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+  }
+  .sidebar-head{
+    padding:22px 20px 18px;border-bottom:1px solid rgba(255,255,255,.1);
+    position:relative;overflow:hidden;
+  }
+  .sidebar-head::after{
+    content:"";position:absolute;left:0;right:0;bottom:0;height:4px;
+    background:repeating-linear-gradient(45deg,var(--orange) 0 10px,#0000 10px 20px);
+    opacity:.9;
+  }
+  .sidebar-head h1{font-size:17px;margin:0 0 2px;font-weight:700;letter-spacing:.2px;}
+  .sidebar-head p{margin:0;font-size:12px;color:#9FB0D4;}
+  nav{flex:1;padding:14px 10px;}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);
+    color:#C7D2EA;cursor:pointer;margin-bottom:2px;font-size:13.5px;font-weight:500;
+    border-left:3px solid transparent;
+  }
+  .nav-item:hover{background:rgba(255,255,255,.06);}
+  .nav-item.active{background:var(--navy-2);color:#fff;border-left-color:var(--orange);}
+  .nav-item .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.6;flex-shrink:0;}
+  .sidebar-foot{padding:14px 20px;border-top:1px solid rgba(255,255,255,.1);font-size:11.5px;color:#8194BE;}
+
+  /* Main */
+  main{flex:1;min-width:0;padding:26px 32px 60px;}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:22px;flex-wrap:wrap;gap:10px;}
+  .topbar h2{font-size:21px;margin:0 0 4px;}
+  .topbar .sub{color:var(--text-2);font-size:13px;}
+  .today{font-size:12.5px;color:var(--text-3);}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;}
+  .card .k{font-size:11.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;}
+  .card .v{font-size:26px;font-weight:600;font-family:'IBM Plex Mono',monospace;}
+  .card .v.orange{color:var(--orange-dark);}
+  .card .v.red{color:var(--red);}
+  .card .v.green{color:var(--green);}
+
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;}
+  .panel-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+  .panel-head h3{margin:0;font-size:14.5px;}
+  .panel-body{padding:18px;}
+
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  input,select{
+    font-family:inherit;font-size:13.5px;padding:8px 10px;border:1px solid var(--border);
+    border-radius:var(--radius);background:#fff;color:var(--text);
+  }
+  input:focus,select:focus{outline:2px solid var(--orange);outline-offset:-1px;border-color:var(--orange);}
+  label{font-size:12px;color:var(--text-2);display:block;margin-bottom:4px;font-weight:500;}
+  .field{display:flex;flex-direction:column;}
+
+  button{
+    font-family:inherit;font-size:13px;font-weight:600;padding:8px 16px;border-radius:var(--radius);
+    border:1px solid transparent;cursor:pointer;background:var(--navy);color:#fff;
+  }
+  button:hover{background:var(--navy-2);}
+  button.primary{background:var(--orange);color:#1A1D23;}
+  button.primary:hover{background:var(--orange-dark);color:#fff;}
+  button.ghost{background:transparent;color:var(--navy);border-color:var(--border);}
+  button.ghost:hover{background:#F0F2F4;}
+  button.danger{background:transparent;color:var(--red);border-color:var(--red-bg);}
+  button.danger:hover{background:var(--red-bg);}
+  button:disabled{opacity:.5;cursor:not-allowed;}
+  button.small{padding:5px 10px;font-size:12px;}
+
+  table{width:100%;border-collapse:collapse;}
+  th{
+    text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--text-3);
+    padding:8px 10px;border-bottom:2px solid var(--border);font-weight:600;white-space:nowrap;
+  }
+  td{padding:9px 10px;border-bottom:1px solid var(--border);font-size:13.5px;vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#FAFBFC;}
+  .tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:#EEF1F5;color:var(--text-2);}
+  .tag-habis{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:var(--red-bg);color:var(--red);margin-left:6px;white-space:nowrap;}
+  .import-drop{border:1.5px dashed var(--border);border-radius:var(--radius);padding:16px;text-align:center;color:var(--text-2);font-size:12.5px;}
+  .progress-bar{height:6px;background:#EEF1F5;border-radius:4px;overflow:hidden;margin-top:8px;}
+  .progress-bar > div{height:100%;background:var(--orange);width:0%;transition:.2s;}
+  .fisik-input{width:80px;text-align:right;}
+  .selisih{font-family:'IBM Plex Mono',monospace;font-weight:600;padding:3px 8px;border-radius:var(--radius);display:inline-block;min-width:36px;text-align:center;}
+  .selisih.zero{background:var(--green-bg);color:var(--green);}
+  .selisih.minus{background:var(--red-bg);color:var(--red);}
+  .selisih.plus{background:#FFF3E0;color:var(--orange-dark);}
+  .selisih.empty{background:#F0F2F4;color:var(--text-3);}
+  .barcode-cell canvas{display:block;}
+  .empty-state{padding:40px 20px;text-align:center;color:var(--text-3);font-size:13px;}
+  .status-badge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;}
+  .status-badge.berjalan{background:#FFF3E0;color:var(--orange-dark);}
+  .status-badge.selesai{background:var(--green-bg);color:var(--green);}
+  .toast{
+    position:fixed;bottom:20px;right:20px;background:var(--navy);color:#fff;padding:12px 18px;
+    border-radius:var(--radius);font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.2);z-index:999;
+    opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none;
+  }
+  .toast.show{opacity:1;transform:translateY(0);}
+  .toast.err{background:var(--red);}
+  #scanModal{
+    position:fixed;inset:0;background:rgba(10,12,16,.75);display:none;align-items:center;justify-content:center;z-index:1000;
+  }
+  #scanModal.show{display:flex;}
+  .scan-box{background:#111;border-radius:6px;overflow:hidden;width:340px;max-width:92vw;}
+  .scan-box video{width:100%;display:block;background:#000;}
+  .scan-box .sb-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;color:#fff;font-size:13px;}
+  .scan-box .sb-foot{padding:10px 14px;color:#B8BFC9;font-size:12px;}
+  .hidden{display:none !important;}
+  ::placeholder{color:var(--text-3);}
+  @media(max-width:800px){
+    .sidebar{width:70px;}
+    .sidebar-head p, .nav-item span.label, .sidebar-foot{display:none;}
+    .sidebar-head h1{font-size:0;}
+    .sidebar-head h1::after{content:"IG";font-size:16px;}
+    main{padding:18px 14px 40px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-head">
+      <h1>Inventory Gudang</h1>
+      <p>Stock &amp; Daily Counting</p>
+    </div>
+    <nav id="nav">
+      <div class="nav-item" data-tab="dashboard"><span class="dot"></span><span class="label">Dashboard</span></div>
+      <div class="nav-item" data-tab="barang"><span class="dot"></span><span class="label">Master Barang</span></div>
+      <div class="nav-item" data-tab="mutasi"><span class="dot"></span><span class="label">Mutasi Stok</span></div>
+      <div class="nav-item" data-tab="opname"><span class="dot"></span><span class="label">Stock Opname</span></div>
+    </nav>
+    <div class="sidebar-foot">Luby · Welhome · Noise · Nanolite · Pikolite</div>
+  </div>
+
+  <main id="main">
+    <div class="empty-state">Memuat…</div>
+  </main>
+</div>
+
+<div id="scanModal">
+  <div class="scan-box">
+    <div class="sb-head">
+      <span>Scan Barcode</span>
+      <button class="small ghost" style="color:#fff;border-color:#444" onclick="Scan.stop()">Tutup</button>
+    </div>
+    <video id="scanVideo" autoplay playsinline muted></video>
+    <div class="sb-foot" id="scanStatus">Mengarahkan kamera…</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== CONFIG ===================== */
+const SUPABASE_URL = 'https://cvrfpsudxhqlndgfjrab.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN2cmZwc3VkeGhxbG5kZ2ZqcmFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1Njc4NzMsImV4cCI6MjEwNDE0Mzg3M30.4W7eoz1csFKNcvzsDjygecMvIiFpYrgHPr4xXYLr4zs';
+const REST = SUPABASE_URL + '/rest/v1';
+const BRANDS = ['Luby','Welhome','Noise','Nanolite','Pikolite'];
+
+/* ===================== API HELPER ===================== */
+async function api(path, opts={}){
+  const headers = {
+    'apikey': ANON_KEY,
+    'Authorization': 'Bearer ' + ANON_KEY,
+    'Content-Type': 'application/json',
+    ...(opts.headers||{})
+  };
+  const res = await fetch(REST + path, {...opts, headers});
+  if(!res.ok){
+    const t = await res.text();
+    throw new Error('API error ' + res.status + ': ' + t);
+  }
+  if(res.status === 204) return null;
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function toast(msg, isErr){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (isErr?' err':'');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(()=>el.classList.remove('show'), 3200);
+}
+function detectBrand(text){
+  const t = text.toLowerCase();
+  for(const b of BRANDS){ if(t.includes(b.toLowerCase())) return b; }
+  return 'Lainnya';
+}
+function genBarcode(){
+  if(window.crypto && crypto.randomUUID) return 'BR' + crypto.randomUUID().replace(/-/g,'').toUpperCase().slice(0,12);
+  return 'BR' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,8).toUpperCase();
+}
+function stokBadge(qty){
+  return qty===0 ? '<span class="tag-habis">Stok Kosong/Habis</span>' : '';
+}
+function escapeHtml(s){
+  return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function parseCSV(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.trim()!=='');
+  const splitLine = (line)=>{
+    const out=[]; let cur=''; let inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){ inQ=!inQ; continue; }
+      if(c===',' && !inQ){ out.push(cur); cur=''; continue; }
+      cur+=c;
+    }
+    out.push(cur);
+    return out.map(s=>s.trim());
+  };
+  const header = splitLine(lines[0]).map(h=>h.toLowerCase());
+  return lines.slice(1).map(line=>{
+    const cells = splitLine(line);
+    const obj = {};
+    header.forEach((h,i)=> obj[h] = cells[i]!==undefined ? cells[i] : '');
+    return obj;
+  });
+}
+function downloadBlob(content, filename, type){
+  const blob = new Blob([content], {type});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+function exportStokCSV(){
+  const header = ['SKU','Nama','Brand','Satuan','Stok','Status'];
+  const rows = State.barang.map(b=>[b.sku, b.nama, b.brand, b.satuan, b.stok_sistem, b.stok_sistem===0?'Kosong/Habis':'Tersedia']);
+  const csv = [header, ...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  downloadBlob('\uFEFF'+csv, `stok-gudang-${todayStr()}.csv`, 'text/csv;charset=utf-8;');
+}
+function exportStokExcel(){
+  const header = ['SKU','Nama','Brand','Satuan','Stok','Status'];
+  const rows = State.barang.map(b=>[b.sku, b.nama, b.brand, b.satuan, b.stok_sistem, b.stok_sistem===0?'Kosong/Habis':'Tersedia']);
+  const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+  ws['!cols'] = [{wch:16},{wch:42},{wch:12},{wch:8},{wch:8},{wch:14}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Stok');
+  XLSX.writeFile(wb, `stok-gudang-${todayStr()}.xlsx`);
+}
+
+/* ===================== STATE ===================== */
+const State = { tab:'dashboard', barang:[], mutasi:[], sesi:null, detail:[] };
+
+/* ===================== NAV ===================== */
+document.getElementById('nav').addEventListener('click', e=>{
+  const item = e.target.closest('.nav-item');
+  if(!item) return;
+  setTab(item.dataset.tab);
+});
+function setTab(tab){
+  State.tab = tab;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.tab===tab));
+  render();
+}
+
+/* ===================== DATA LOAD ===================== */
+async function loadBarang(){
+  State.barang = await api('/barang?select=*&order=nama.asc');
+}
+async function loadMutasiHariIni(){
+  State.mutasi = await api(`/mutasi_stok?select=*&tanggal=eq.${todayStr()}&order=created_at.desc`);
+}
+async function ensureSesiHariIni(){
+  let sesi = await api(`/opname_sesi?select=*&tanggal=eq.${todayStr()}`);
+  if(sesi.length===0){
+    sesi = await api('/opname_sesi', {method:'POST', headers:{'Prefer':'return=representation'}, body: JSON.stringify({tanggal: todayStr(), status:'berjalan'})});
+  }
+  State.sesi = sesi[0];
+}
+async function ensureOpnameDetail(){
+  await ensureSesiHariIni();
+  const existing = await api(`/opname_detail?select=*&opname_id=eq.${State.sesi.id}`);
+  const existingIds = new Set(existing.map(d=>d.barang_id));
+  const missing = State.barang.filter(b=>!existingIds.has(b.id));
+  if(missing.length){
+    const rows = missing.map(b=>({opname_id: State.sesi.id, barang_id: b.id, stok_sistem: b.stok_sistem}));
+    await api('/opname_detail', {method:'POST', body: JSON.stringify(rows)});
+  }
+  State.detail = await api(`/opname_detail?select=*&opname_id=eq.${State.sesi.id}&order=created_at.asc`);
+}
+
+/* ===================== RENDER ROOT ===================== */
+async function render(){
+  const main = document.getElementById('main');
+  main.innerHTML = '<div class="empty-state">Memuat…</div>';
+  try{
+    if(State.tab==='dashboard') await renderDashboard();
+    else if(State.tab==='barang') await renderBarang();
+    else if(State.tab==='mutasi') await renderMutasi();
+    else if(State.tab==='opname') await renderOpname();
+  }catch(err){
+    main.innerHTML = `<div class="empty-state">Gagal memuat data.<br><span class="mono" style="font-size:11.5px">${escapeHtml(err.message)}</span></div>`;
+  }
+}
+
+/* ===================== DASHBOARD ===================== */
+async function renderDashboard(){
+  await loadBarang();
+  let sesi=null, detail=[];
+  try{
+    sesi = (await api(`/opname_sesi?select=*&tanggal=eq.${todayStr()}`))[0] || null;
+    if(sesi) detail = await api(`/opname_detail?select=*&opname_id=eq.${sesi.id}`);
+  }catch(e){}
+
+  const totalSKU = State.barang.length;
+  const totalStok = State.barang.reduce((s,b)=>s+(b.stok_sistem||0),0);
+  const sudahDihitung = detail.filter(d=>d.stok_fisik!==null).length;
+  const selisihCount = detail.filter(d=>d.stok_fisik!==null && d.stok_fisik!==d.stok_sistem).length;
+
+  const perBrand = {};
+  BRANDS.concat('Lainnya').forEach(b=>perBrand[b]={sku:0,stok:0});
+  State.barang.forEach(b=>{
+    const br = perBrand[b.brand] ? b.brand : 'Lainnya';
+    perBrand[br].sku++; perBrand[br].stok += (b.stok_sistem||0);
+  });
+
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="topbar">
+      <div><h2>Dashboard</h2><div class="sub">Ringkasan stok inventory gudang secara realtime</div></div>
+      <div class="row" style="align-items:flex-end">
+        <div class="today">${new Date().toLocaleDateString('id-ID',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
+        <button class="ghost small" id="btnExportCsv">Download CSV</button>
+        <button class="primary small" id="btnExportXlsx">Download Excel</button>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card"><div class="k">Total SKU</div><div class="v">${totalSKU}</div></div>
+      <div class="card"><div class="k">Total Stok Sistem</div><div class="v">${totalStok}</div></div>
+      <div class="card"><div class="k">Opname Hari Ini</div><div class="v ${sesi?(sesi.status==='selesai'?'green':'orange'):''}">${sesi ? (sesi.status==='selesai'?'Selesai':`${sudahDihitung}/${totalSKU}`) : 'Belum mulai'}</div></div>
+      <div class="card"><div class="k">Selisih Ditemukan</div><div class="v ${selisihCount>0?'red':'green'}">${selisihCount}</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Stok per Brand</h3></div>
+      <div class="panel-body" style="padding:0">
+        <table>
+          <thead><tr><th>Brand</th><th>Jumlah SKU</th><th>Total Stok</th></tr></thead>
+          <tbody>
+            ${Object.entries(perBrand).map(([b,v])=>`<tr><td>${b}</td><td class="mono">${v.sku}</td><td class="mono">${v.stok}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Stok Realtime</h3>
+        <input id="dashSearch" placeholder="Cari SKU / nama barang..." style="width:220px">
+      </div>
+      <div class="panel-body" style="padding:0">
+        <table>
+          <thead><tr><th>SKU</th><th>Nama Barang</th><th>Brand</th><th>Stok</th></tr></thead>
+          <tbody id="dashRows"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  const renderRows = (filter='') => {
+    const f = filter.toLowerCase();
+    const rows = State.barang.filter(b => !f || b.sku.toLowerCase().includes(f) || b.nama.toLowerCase().includes(f));
+    document.getElementById('dashRows').innerHTML = rows.length ? rows.map(b=>`
+      <tr><td class="mono">${escapeHtml(b.sku)}</td><td>${escapeHtml(b.nama)}</td><td><span class="tag">${escapeHtml(b.brand)}</span></td><td class="mono">${b.stok_sistem}${stokBadge(b.stok_sistem)}</td></tr>
+    `).join('') : `<tr><td colspan="4" class="empty-state">Belum ada data barang</td></tr>`;
+  };
+  renderRows();
+  document.getElementById('dashSearch').addEventListener('input', e=>renderRows(e.target.value));
+  document.getElementById('btnExportCsv').addEventListener('click', exportStokCSV);
+  document.getElementById('btnExportXlsx').addEventListener('click', exportStokExcel);
+}
+
+/* ===================== MASTER BARANG ===================== */
+async function renderBarang(){
+  await loadBarang();
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="topbar"><div><h2>Master Barang</h2><div class="sub">Kelola data barang, brand otomatis terdeteksi dari SKU/nama</div></div></div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Tambah Barang Baru</h3></div>
+      <div class="panel-body">
+        <form id="formBarang" class="row" style="align-items:flex-end">
+          <div class="field"><label>SKU</label><input id="fSku" required placeholder="cth: LBY-RKT-001"></div>
+          <div class="field"><label>Nama Barang</label><input id="fNama" required placeholder="cth: Luby Raket Ukuran Sedang" style="width:220px"></div>
+          <div class="field"><label>Brand (auto, bisa diubah)</label>
+            <select id="fBrand">${BRANDS.concat('Lainnya').map(b=>`<option value="${b}">${b}</option>`).join('')}</select>
+          </div>
+          <div class="field"><label>Satuan</label><input id="fSatuan" value="pcs" style="width:80px"></div>
+          <div class="field"><label>Stok Awal</label><input id="fStok" type="number" value="0" min="0" style="width:90px"></div>
+          <button type="submit" class="primary">+ Tambah Barang</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Import Data Barang (JSON)</h3></div>
+      <div class="panel-body">
+        <div class="import-drop">
+          Pilih file JSON hasil konversi (format: array objek dengan field <span class="mono">sku, nama, brand, satuan, stok_sistem</span>).<br>
+          SKU yang sudah ada akan di-<b>update stoknya</b>, SKU baru akan ditambahkan otomatis dengan barcode baru.
+          <div style="margin-top:10px"><input type="file" id="importFile" accept="application/json"></div>
+          <div class="progress-bar hidden" id="importProgressWrap"><div id="importProgressBar"></div></div>
+          <div id="importStatus" style="margin-top:8px;font-size:12.5px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Daftar Barang (${State.barang.length})</h3>
+        <input id="barangSearch" placeholder="Cari SKU / nama / brand..." style="width:220px">
+      </div>
+      <div class="panel-body" style="padding:0">
+        <table>
+          <thead><tr><th>SKU</th><th>Nama</th><th>Brand</th><th>Barcode</th><th>Stok</th><th>Satuan</th><th></th></tr></thead>
+          <tbody id="barangRows"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  const sku = document.getElementById('fSku'), nama = document.getElementById('fNama'), brandSel = document.getElementById('fBrand');
+  let brandTouched = false;
+  brandSel.addEventListener('change', ()=>brandTouched=true);
+  const autoBrand = ()=>{ if(!brandTouched) brandSel.value = detectBrand(sku.value+' '+nama.value); };
+  sku.addEventListener('input', autoBrand); nama.addEventListener('input', autoBrand);
+
+  function renderRows(filter=''){
+    const f = filter.toLowerCase();
+    const rows = State.barang.filter(b=>!f || b.sku.toLowerCase().includes(f) || b.nama.toLowerCase().includes(f) || b.brand.toLowerCase().includes(f));
+    const tbody = document.getElementById('barangRows');
+    tbody.innerHTML = rows.length ? rows.map(b=>`
+      <tr data-id="${b.id}">
+        <td class="mono">${escapeHtml(b.sku)}</td>
+        <td>${escapeHtml(b.nama)}</td>
+        <td><span class="tag">${escapeHtml(b.brand)}</span></td>
+        <td class="barcode-cell"><canvas class="bc" data-code="${escapeHtml(b.barcode||'')}"></canvas></td>
+        <td class="mono">${b.stok_sistem}${stokBadge(b.stok_sistem)}</td>
+        <td>${escapeHtml(b.satuan)}</td>
+        <td><button class="small danger" data-del="${b.id}">Hapus</button></td>
+      </tr>
+    `).join('') : `<tr><td colspan="7" class="empty-state">Belum ada barang. Tambahkan di form atas.</td></tr>`;
+    tbody.querySelectorAll('canvas.bc').forEach(c=>{
+      if(c.dataset.code) try{ JsBarcode(c, c.dataset.code, {format:'CODE128', width:1.3, height:32, fontSize:10, margin:2}); }catch(e){}
+    });
+    tbody.querySelectorAll('[data-del]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        if(!confirm('Hapus barang ini? Riwayat mutasi terkait juga akan terhapus.')) return;
+        try{ await api(`/barang?id=eq.${btn.dataset.del}`, {method:'DELETE'}); toast('Barang dihapus'); await renderBarang(); }
+        catch(e){ toast('Gagal menghapus: '+e.message, true); }
+      });
+    });
+  }
+  renderRows();
+  document.getElementById('barangSearch').addEventListener('input', e=>renderRows(e.target.value));
+
+  document.getElementById('formBarang').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const payload = {
+      sku: sku.value.trim(),
+      nama: nama.value.trim(),
+      brand: brandSel.value,
+      satuan: document.getElementById('fSatuan').value.trim() || 'pcs',
+      stok_sistem: parseInt(document.getElementById('fStok').value)||0,
+      barcode: genBarcode()
+    };
+    try{
+      await api('/barang', {method:'POST', body: JSON.stringify(payload)});
+      toast('Barang berhasil ditambahkan');
+      await renderBarang();
+    }catch(err){ toast('Gagal menambah barang: '+err.message, true); }
+  });
+
+  document.getElementById('importFile').addEventListener('change', async e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    let items;
+    try{
+      items = JSON.parse(await file.text());
+      if(!Array.isArray(items)) throw new Error('Format file harus berupa array JSON');
+    }catch(err){ toast('File JSON tidak valid: '+err.message, true); return; }
+
+    const statusEl = document.getElementById('importStatus');
+    const wrap = document.getElementById('importProgressWrap');
+    const bar = document.getElementById('importProgressBar');
+    wrap.classList.remove('hidden');
+    bar.style.width = '0%';
+    statusEl.textContent = 'Menyinkronkan data barang terbaru...';
+
+    // Ambil ulang data barang terkini (menghindari SKU ganda jika ini percobaan ulang)
+    let currentBarang;
+    try{ currentBarang = await api('/barang?select=id,sku'); }
+    catch(err){ statusEl.textContent = 'Gagal membaca data barang saat ini: '+err.message; toast('Import dibatalkan', true); return; }
+
+    const existingBySku = Object.fromEntries(currentBarang.map(b=>[b.sku, b]));
+    const toInsert = [], toUpdate = [];
+    for(const it of items){
+      if(!it.sku || !it.nama) continue;
+      const brand = BRANDS.includes(it.brand) ? it.brand : (it.brand || 'Lainnya');
+      const stok = parseInt(it.stok_sistem)||0;
+      if(existingBySku[it.sku]){
+        toUpdate.push({id: existingBySku[it.sku].id, stok_sistem: stok});
+      } else {
+        toInsert.push({sku: it.sku, nama: it.nama, brand, satuan: it.satuan||'pcs', stok_sistem: stok, barcode: genBarcode()});
+      }
+    }
+
+    const total = toInsert.length + toUpdate.length;
+    let done = 0;
+    const CHUNK = 100;
+    try{
+      for(let i=0;i<toInsert.length;i+=CHUNK){
+        const chunk = toInsert.slice(i,i+CHUNK);
+        try{
+          await api('/barang', {method:'POST', body: JSON.stringify(chunk)});
+        }catch(chunkErr){
+          throw new Error(`gagal pada baris ${i+1}-${i+chunk.length} (SKU: ${chunk[0].sku}...${chunk[chunk.length-1].sku}). Detail: ${chunkErr.message}`);
+        }
+        done += chunk.length;
+        bar.style.width = Math.round(done/total*100)+'%';
+        statusEl.textContent = `Memproses… ${done}/${total}`;
+      }
+      for(const u of toUpdate){
+        await api(`/barang?id=eq.${u.id}`, {method:'PATCH', body: JSON.stringify({stok_sistem: u.stok_sistem, updated_at: new Date().toISOString()})});
+        done += 1;
+        bar.style.width = Math.round(done/total*100)+'%';
+        statusEl.textContent = `Memproses… ${done}/${total}`;
+      }
+      statusEl.textContent = `Selesai. ${toInsert.length} barang baru ditambahkan, ${toUpdate.length} barang di-update stoknya.`;
+      toast('Import selesai');
+      await renderBarang();
+    }catch(err){
+      statusEl.textContent = 'Import gagal di tengah jalan: ' + err.message;
+      toast('Import gagal: '+err.message, true);
+    }
+  });
+}
+
+/* ===================== MUTASI STOK ===================== */
+async function renderMutasi(){
+  await loadBarang();
+  await loadMutasiHariIni();
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="topbar"><div><h2>Mutasi Stok</h2><div class="sub">Catat barang masuk dan keluar harian</div></div></div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Import Mutasi Massal (CSV)</h3></div>
+      <div class="panel-body">
+        <div class="import-drop">
+          Format kolom CSV: <span class="mono">sku,jenis,jumlah,keterangan</span> — <span class="mono">jenis</span> diisi <b>masuk</b> atau <b>keluar</b>, <span class="mono">keterangan</span> boleh kosong.<br>
+          <div style="margin-top:8px"><button class="ghost small" id="btnTemplateCsv">Download Template CSV</button></div>
+          <div style="margin-top:10px"><input type="file" id="importMutasiFile" accept=".csv"></div>
+          <div class="progress-bar hidden" id="mutasiProgressWrap"><div id="mutasiProgressBar"></div></div>
+          <div id="mutasiImportStatus" style="margin-top:8px;font-size:12.5px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Input Mutasi</h3></div>
+      <div class="panel-body">
+        <form id="formMutasi" class="row" style="align-items:flex-end">
+          <div class="field"><label>Barang</label>
+            <select id="mBarang" style="width:260px" required>
+              <option value="">-- pilih barang --</option>
+              ${State.barang.map(b=>`<option value="${b.id}">${escapeHtml(b.sku)} — ${escapeHtml(b.nama)} (stok: ${b.stok_sistem})</option>`).join('')}
+            </select>
+          </div>
+          <div class="field"><label>Jenis</label>
+            <select id="mJenis"><option value="masuk">Masuk</option><option value="keluar">Keluar</option></select>
+          </div>
+          <div class="field"><label>Jumlah</label><input id="mJumlah" type="number" min="1" required style="width:100px"></div>
+          <div class="field"><label>Keterangan</label><input id="mKet" placeholder="opsional" style="width:200px"></div>
+          <button type="submit" class="primary">Simpan Mutasi</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Riwayat Hari Ini (${State.mutasi.length})</h3></div>
+      <div class="panel-body" style="padding:0">
+        <table>
+          <thead><tr><th>Waktu</th><th>Barang</th><th>Jenis</th><th>Jumlah</th><th>Keterangan</th></tr></thead>
+          <tbody id="mutasiRows"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  const barangMap = Object.fromEntries(State.barang.map(b=>[b.id,b]));
+  const tbody = document.getElementById('mutasiRows');
+  tbody.innerHTML = State.mutasi.length ? State.mutasi.map(m=>{
+    const b = barangMap[m.barang_id];
+    return `<tr>
+      <td class="mono">${new Date(m.created_at).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}</td>
+      <td>${b?escapeHtml(b.sku+' — '+b.nama):'(dihapus)'}</td>
+      <td><span class="tag" style="${m.jenis==='masuk'?'background:#E8F5E9;color:#2E7D32':'background:#FDECEA;color:#C62828'}">${m.jenis}</span></td>
+      <td class="mono">${m.jumlah}</td>
+      <td>${escapeHtml(m.keterangan||'-')}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="5" class="empty-state">Belum ada mutasi hari ini</td></tr>`;
+
+  document.getElementById('formMutasi').addEventListener('submit', async e=>{
+    e.preventDefault();
+    const barangId = document.getElementById('mBarang').value;
+    const jenis = document.getElementById('mJenis').value;
+    const jumlah = parseInt(document.getElementById('mJumlah').value);
+    const ket = document.getElementById('mKet').value.trim();
+    if(!barangId){ toast('Pilih barang dulu', true); return; }
+    const b = barangMap[barangId];
+    const stokBaru = jenis==='masuk' ? b.stok_sistem + jumlah : b.stok_sistem - jumlah;
+    if(stokBaru < 0){ toast('Stok tidak cukup untuk dikeluarkan', true); return; }
+    try{
+      await api(`/barang?id=eq.${barangId}`, {method:'PATCH', body: JSON.stringify({stok_sistem: stokBaru, updated_at: new Date().toISOString()})});
+      await api('/mutasi_stok', {method:'POST', body: JSON.stringify({barang_id: barangId, tanggal: todayStr(), jenis, jumlah, keterangan: ket||null})});
+      toast('Mutasi stok berhasil disimpan');
+      await renderMutasi();
+    }catch(err){ toast('Gagal menyimpan mutasi: '+err.message, true); }
+  });
+
+  document.getElementById('btnTemplateCsv').addEventListener('click', ()=>{
+    const sample = 'sku,jenis,jumlah,keterangan\n' + (State.barang[0]? `${State.barang[0].sku},masuk,10,contoh restock` : 'SKU-CONTOH,masuk,10,contoh restock');
+    downloadBlob('\uFEFF'+sample, 'template-mutasi.csv', 'text/csv;charset=utf-8;');
+  });
+
+  document.getElementById('importMutasiFile').addEventListener('change', async e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    let rows;
+    try{
+      rows = parseCSV(await file.text());
+      if(!rows.length) throw new Error('File kosong atau format tidak sesuai');
+    }catch(err){ toast('Gagal membaca CSV: '+err.message, true); return; }
+
+    const statusEl = document.getElementById('mutasiImportStatus');
+    const wrap = document.getElementById('mutasiProgressWrap');
+    const bar = document.getElementById('mutasiProgressBar');
+    wrap.classList.remove('hidden'); bar.style.width='0%';
+
+    // ambil data barang terkini agar akurat
+    const currentBarang = await api('/barang?select=*');
+    const bySku = Object.fromEntries(currentBarang.map(b=>[b.sku, b]));
+
+    let ok=0, fail=0; const errors=[];
+    for(let i=0;i<rows.length;i++){
+      const r = rows[i];
+      const sku = (r.sku||'').trim();
+      const jenis = (r.jenis||'').trim().toLowerCase();
+      const jumlah = parseInt(r.jumlah);
+      const ket = (r.keterangan||'').trim();
+      const b = bySku[sku];
+      if(!b){ fail++; errors.push(`Baris ${i+2}: SKU "${sku}" tidak ditemukan`); }
+      else if(jenis!=='masuk' && jenis!=='keluar'){ fail++; errors.push(`Baris ${i+2}: jenis harus masuk/keluar`); }
+      else if(!jumlah || jumlah<=0){ fail++; errors.push(`Baris ${i+2}: jumlah tidak valid`); }
+      else {
+        const stokBaru = jenis==='masuk' ? b.stok_sistem + jumlah : b.stok_sistem - jumlah;
+        if(stokBaru < 0){ fail++; errors.push(`Baris ${i+2}: stok "${sku}" tidak cukup untuk dikeluarkan`); }
+        else{
+          try{
+            await api(`/barang?id=eq.${b.id}`, {method:'PATCH', body: JSON.stringify({stok_sistem: stokBaru, updated_at: new Date().toISOString()})});
+            await api('/mutasi_stok', {method:'POST', body: JSON.stringify({barang_id: b.id, tanggal: todayStr(), jenis, jumlah, keterangan: ket||null})});
+            b.stok_sistem = stokBaru;
+            ok++;
+          }catch(err){ fail++; errors.push(`Baris ${i+2}: gagal menyimpan (${err.message})`); }
+        }
+      }
+      bar.style.width = Math.round((i+1)/rows.length*100)+'%';
+      statusEl.textContent = `Memproses… ${i+1}/${rows.length}`;
+    }
+    statusEl.innerHTML = `Selesai. <b>${ok} berhasil</b>, ${fail} gagal.` + (errors.length? '<br>'+errors.slice(0,8).map(escapeHtml).join('<br>') + (errors.length>8?`<br>...dan ${errors.length-8} lainnya`:'') : '');
+    toast(fail? `Import selesai dengan ${fail} error` : 'Import mutasi berhasil semua', fail>0);
+    await renderMutasi();
+  });
+}
+
+/* ===================== STOCK OPNAME ===================== */
+async function renderOpname(){
+  await loadBarang();
+  const main = document.getElementById('main');
+  main.innerHTML = `<div class="empty-state">Menyiapkan sesi opname hari ini…</div>`;
+  await ensureOpnameDetail();
+
+  const barangMap = Object.fromEntries(State.barang.map(b=>[b.id,b]));
+  const dihitung = State.detail.filter(d=>d.stok_fisik!==null).length;
+  const selisihCount = State.detail.filter(d=>d.stok_fisik!==null && d.stok_fisik!==d.stok_sistem).length;
+
+  main.innerHTML = `
+    <div class="topbar">
+      <div><h2>Stock Opname <span class="status-badge ${State.sesi.status}">${State.sesi.status}</span></h2>
+        <div class="sub">Sesi tanggal ${State.sesi.tanggal} · progres ${dihitung}/${State.barang.length} · selisih ${selisihCount}</div>
+      </div>
+      <div class="row">
+        <button class="ghost" id="btnScan" ${State.sesi.status==='selesai'?'disabled':''}>Scan Barcode</button>
+        <button class="primary" id="btnSelesai" ${State.sesi.status==='selesai'?'disabled':''}>Selesaikan Opname</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Hitung Fisik Barang</h3>
+        <input id="opnameSearch" placeholder="Cari SKU / nama..." style="width:220px">
+      </div>
+      <div class="panel-body" style="padding:0">
+        <table>
+          <thead><tr><th>SKU</th><th>Nama</th><th>Brand</th><th>Stok Sistem</th><th>Stok Fisik</th><th>Selisih</th></tr></thead>
+          <tbody id="opnameRows"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  function selisihBadge(d){
+    if(d.stok_fisik===null || d.stok_fisik===undefined) return `<span class="selisih empty">-</span>`;
+    const s = d.stok_fisik - d.stok_sistem;
+    const cls = s===0?'zero':(s<0?'minus':'plus');
+    return `<span class="selisih ${cls}">${s>0?'+':''}${s}</span>`;
+  }
+
+  function renderRows(filter=''){
+    const f = filter.toLowerCase();
+    const rows = State.detail.filter(d=>{
+      const b = barangMap[d.barang_id]; if(!b) return false;
+      return !f || b.sku.toLowerCase().includes(f) || b.nama.toLowerCase().includes(f);
+    });
+    document.getElementById('opnameRows').innerHTML = rows.length ? rows.map(d=>{
+      const b = barangMap[d.barang_id];
+      if(!b) return '';
+      return `<tr data-detail="${d.id}" data-barcode="${escapeHtml(b.barcode||'')}" data-sku="${escapeHtml(b.sku)}">
+        <td class="mono">${escapeHtml(b.sku)}</td>
+        <td>${escapeHtml(b.nama)}</td>
+        <td><span class="tag">${escapeHtml(b.brand)}</span></td>
+        <td class="mono">${d.stok_sistem}${stokBadge(d.stok_sistem)}</td>
+        <td><input type="number" class="fisik-input" data-id="${d.id}" value="${d.stok_fisik??''}" min="0" ${State.sesi.status==='selesai'?'disabled':''}></td>
+        <td class="selisih-cell">${selisihBadge(d)}</td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="6" class="empty-state">Tidak ada barang cocok</td></tr>`;
+
+    document.querySelectorAll('.fisik-input').forEach(inp=>{
+      inp.addEventListener('change', async ()=>{
+        const val = inp.value===''? null : parseInt(inp.value);
+        const id = inp.dataset.id;
+        const d = State.detail.find(x=>x.id===id);
+        d.stok_fisik = val;
+        try{
+          await api(`/opname_detail?id=eq.${id}`, {method:'PATCH', body: JSON.stringify({stok_fisik: val, updated_at: new Date().toISOString()})});
+          inp.closest('tr').querySelector('.selisih-cell').innerHTML = selisihBadge(d);
+        }catch(err){ toast('Gagal menyimpan hitungan: '+err.message, true); }
+      });
+    });
+  }
+  renderRows();
+  document.getElementById('opnameSearch').addEventListener('input', e=>renderRows(e.target.value));
+
+  document.getElementById('btnScan').addEventListener('click', ()=>Scan.start(code=>{
+    const row = [...document.querySelectorAll('#opnameRows tr')].find(r=>r.dataset.barcode===code);
+    if(row){
+      row.scrollIntoView({behavior:'smooth', block:'center'});
+      row.style.background = '#FFF3E0';
+      setTimeout(()=>row.style.background='', 1400);
+      const inp = row.querySelector('.fisik-input');
+      if(inp && !inp.disabled) inp.focus();
+      toast('Barang ditemukan: ' + row.dataset.sku);
+    } else {
+      toast('Barcode tidak ditemukan di daftar', true);
+    }
+  }));
+
+  document.getElementById('btnSelesai').addEventListener('click', async ()=>{
+    const belum = State.detail.filter(d=>d.stok_fisik===null).length;
+    const msg = belum>0
+      ? `Masih ada ${belum} barang belum dihitung. Selesaikan opname sekarang? Stok sistem akan disesuaikan mengikuti hasil hitung fisik untuk barang yang sudah dihitung.`
+      : `Selesaikan opname? Stok sistem akan disesuaikan mengikuti hasil hitung fisik.`;
+    if(!confirm(msg)) return;
+    try{
+      const updates = State.detail.filter(d=>d.stok_fisik!==null && d.stok_fisik!==d.stok_sistem);
+      for(const d of updates){
+        await api(`/barang?id=eq.${d.barang_id}`, {method:'PATCH', body: JSON.stringify({stok_sistem: d.stok_fisik, updated_at: new Date().toISOString()})});
+      }
+      await api(`/opname_sesi?id=eq.${State.sesi.id}`, {method:'PATCH', body: JSON.stringify({status:'selesai'})});
+      toast('Opname selesai, stok sistem sudah disesuaikan');
+      await renderOpname();
+    }catch(err){ toast('Gagal menyelesaikan opname: '+err.message, true); }
+  });
+}
+
+/* ===================== BARCODE SCAN (native BarcodeDetector) ===================== */
+const Scan = {
+  stream:null, detector:null, loopId:null, onResult:null,
+  async start(onResult){
+    this.onResult = onResult;
+    const modal = document.getElementById('scanModal');
+    const statusEl = document.getElementById('scanStatus');
+    modal.classList.add('show');
+    if(!('BarcodeDetector' in window)){
+      statusEl.textContent = 'Kamera scan tidak didukung di browser ini. Gunakan kolom pencarian manual.';
+      return;
+    }
+    try{
+      this.detector = new BarcodeDetector({formats:['code_128','ean_13','ean_8','upc_a','upc_e','codabar']});
+      this.stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+      const video = document.getElementById('scanVideo');
+      video.srcObject = this.stream;
+      statusEl.textContent = 'Arahkan kamera ke barcode…';
+      const tick = async ()=>{
+        if(!this.stream) return;
+        try{
+          const codes = await this.detector.detect(video);
+          if(codes.length){ this.stop(); this.onResult(codes[0].rawValue); return; }
+        }catch(e){}
+        this.loopId = requestAnimationFrame(tick);
+      };
+      tick();
+    }catch(err){
+      statusEl.textContent = 'Tidak bisa mengakses kamera: ' + err.message;
+    }
+  },
+  stop(){
+    if(this.loopId) cancelAnimationFrame(this.loopId);
+    if(this.stream) this.stream.getTracks().forEach(t=>t.stop());
+    this.stream = null;
+    document.getElementById('scanModal').classList.remove('show');
+  }
+};
+
+/* ===================== INIT ===================== */
+setTab('dashboard');
+</script>
+</body>
+</html>
